@@ -1,0 +1,26 @@
+[Unit]
+Description=ragdeck — admin UI for the rag-suite stack
+After=network-online.target
+
+[Container]
+Image=localhost/ragdeck:latest
+ContainerName=ragdeck
+
+# Mount app code for dev workflow
+Volume=%h/git/ragdeck:/app:ro,Z
+
+# Environment from shared config
+EnvironmentFile=%h/.config/llm-stack/env
+
+# Run as non-root
+User=1001
+
+# Networking — needs access to all rag-suite services
+Network=host
+
+[Service]
+Restart=on-failure
+RestartSec=30
+
+[Install]
+WantedBy=default.target
