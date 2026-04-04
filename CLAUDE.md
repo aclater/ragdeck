@@ -56,3 +56,58 @@ ruff check && ruff format --check
 - Do not recommend or implement CPU-only solutions without first investigating whether a GPU-accelerated alternative exists for all three vendors.
 - When benchmarking or profiling, always compare GPU vs CPU and report both. Never present CPU-only results as the baseline.
 - When writing GPU detection code, always write it once as a shared utility function — do not duplicate vendor detection logic across files.
+
+
+## Always verify current versions before using them
+
+This is a hard requirement, not a suggestion. Using stale version numbers
+wastes time, breaks builds, and has caused real incidents on this stack.
+
+- BEFORE referencing any version number — for a container image, Python
+  package, ROCm release, CUDA toolkit, npm package, system package, LLM
+  model, or any other software — look it up. Do not use version numbers
+  from training knowledge. They are outdated.
+- For container images: check the registry (quay.io, ghcr.io,
+  registry.access.redhat.com, docker.io) for the current stable tag
+  before writing it. Verify the tag exists. Never use :latest in
+  production quadlets.
+- For Python packages: check PyPI for the current stable release
+  before pinning.
+- For ROCm: check https://rocm.docs.amd.com and
+  https://github.com/RadeonOpenCompute/ROCm/releases for the current
+  stable release. ROCm versions change frequently and using an old
+  version is a primary cause of GPU acceleration failures on this stack.
+- For CUDA: check https://developer.nvidia.com/cuda-downloads for the
+  current stable release.
+- For npm packages: check https://www.npmjs.com or run
+  npm show <package> version.
+- For LLM models: check Hugging Face and the model provider directly
+  for current releases.
+- For system packages (dnf/rpm/apt): do not pin versions unless
+  explicitly asked — let the package manager resolve current stable.
+- If you cannot verify a version, say so explicitly and ask.
+  Do not guess. Do not use what you think the version is.
+
+
+## Repository location
+
+All code, projects, and repositories live exclusively under ~/git/.
+
+- Never clone, create, or initialize a repository anywhere else on this
+  system — not in ~/, not in /tmp, not in ~/Documents, or any other path.
+- Before cloning or creating any repo, verify the target path is under
+  ~/git/. If it is not, stop and correct the path.
+- If you find a repository outside ~/git/, do not work in it. Move it
+  to ~/git/ first, update any remotes if needed, and confirm the old
+  location is removed before proceeding.
+- When referencing local repos, always use ~/git/<reponame> as the path.
+
+
+## User scripts and tools
+
+User scripts and tools live in ~/.local/bin/, not ~/bin/.
+
+- Always install scripts to ~/.local/bin/
+- When referencing or running user scripts, always use ~/.local/bin/<script>
+- Never create or reference scripts in ~/bin/ — that path is not used on
+  this system
