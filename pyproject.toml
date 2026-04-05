@@ -10,13 +10,22 @@ readme = "README.md"
 license = "AGPL-3.0-or-later"
 requires-python = ">=3.11"
 dependencies = [
-    "fastapi",
-    "uvicorn",
-    "httpx",
+    "fastapi>=0.115.0",
+    "uvicorn[standard]>=0.32.0",
+    "httpx>=0.28.0",
+    "asyncpg>=0.30.0",
+    "jinja2>=3.1.0",
+    "python-multipart>=0.0.20",
 ]
 
 [project.optional-dependencies]
-dev = ["pytest", "pytest-asyncio", "ruff", "httpx"]
+dev = [
+    "pytest>=8.0.0",
+    "pytest-asyncio>=0.24.0",
+    "pytest-cov>=6.0.0",
+    "ruff>=0.8.0",
+    "mypy>=1.14.0",
+]
 
 [project.scripts]
 ragdeck = "ragdeck.main:main"
@@ -28,6 +37,13 @@ skips = ["B101"]
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 python_files = ["test_*.py"]
+
+[tool.ruff]
+target-version = "py311"
+line-length = 120
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I"]
 
 [tool.commitizen]
 name = "cz_conventional_commits"

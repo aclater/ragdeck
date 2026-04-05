@@ -2,17 +2,23 @@
 # Base: UBI10 minimal, pinned to digest for reproducibility
 FROM registry.access.redhat.com/ubi10@sha256:1b616c4a90d6444b394d5c8f4bd9e15a394d95dd628925d0ec80c257fdc5099c
 
-# Install system packages at build time
 # hadolint ignore=DL3041
-RUN dnf install -y -q python3 python3-pip && \
+RUN dnf install -y -q python3 python3-pip curl && \
     dnf clean all && \
     rm -rf /var/cache/dnf
 
-COPY pyproject.toml README.md /app/
-COPY ragdeck/ /app/ragdeck/
 WORKDIR /app
-RUN pip install --no-cache-dir .
+
+COPY pyproject.toml README.md ./
+RUN pip install --no-cache-dir --no-build-isolation -e .
+
+COPY ragdeck/ ragdeck/
 
 USER 1001
-EXPOSE 8095
-CMD ["ragdeck"]
+
+EXPOSE 8092
+
+HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
+  CMD curl -sf http://localhost:8092/health || exit 1
+
+CMD ["uvicorn", "ragdeck.main:app", "--host", "0.0.0.0", "--port", "8092"]

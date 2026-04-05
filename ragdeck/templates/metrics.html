@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Metrics — ragdeck</title>
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+  <header>
+    <nav>
+      <a href="/" id="nav-dashboard">Dashboard</a>
+      <a href="/collections-ui" id="nav-collections">Collections</a>
+      <a href="/querylog-ui" id="nav-querylog">Query Log</a>
+      <a href="/ingest-ui" id="nav-ingest">Ingest</a>
+      <a href="/metrics-ui" id="nav-metrics">Metrics</a>
+      <a href="/admin-ui" id="nav-admin">Admin</a>
+    </nav>
+  </header>
+  <main>
+    <h1>Metrics</h1>
+
+    <div class="section-header">
+      <h2>ragwatch Summary</h2>
+      <button class="btn" onclick="loadMetrics()">Refresh</button>
+    </div>
+
+    <div id="metrics-summary">
+      <p style="color:var(--text-muted)">Loading…</p>
+    </div>
+  </main>
+
+  <script src="/static/app.js"></script>
+  <script>
+    document.getElementById('nav-metrics').classList.add('active');
+    poll(loadMetrics, 60000);
+    loadMetrics();
+  </script>
+</body>
+</html>

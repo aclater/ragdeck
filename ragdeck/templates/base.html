@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ragdeck — RAG Suite Admin</title>
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+  <header>
+    <nav>
+      <a href="/" id="nav-dashboard">Dashboard</a>
+      <a href="/collections-ui" id="nav-collections">Collections</a>
+      <a href="/querylog-ui" id="nav-querylog">Query Log</a>
+      <a href="/ingest-ui" id="nav-ingest">Ingest</a>
+      <a href="/metrics-ui" id="nav-metrics">Metrics</a>
+      <a href="/admin-ui" id="nav-admin">Admin</a>
+    </nav>
+  </header>
+  <main>
+    {{ content }}
+  </main>
+  <script src="/static/app.js"></script>
+  <script>
+    const path = window.location.pathname;
+    const navMap = {
+      '/': 'dashboard', '/collections-ui': 'collections',
+      '/querylog-ui': 'querylog', '/ingest-ui': 'ingest',
+      '/metrics-ui': 'metrics', '/admin-ui': 'admin'
+    };
+    const active = navMap[path];
+    if (active) {
+      const el = document.getElementById(`nav-${active}`);
+      if (el) el.classList.add('active');
+    }
+  </script>
+</body>
+</html>
