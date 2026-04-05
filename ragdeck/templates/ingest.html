@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Ingest — ragdeck</title>
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+  <header>
+    <nav>
+      <a href="/" id="nav-dashboard">Dashboard</a>
+      <a href="/collections-ui" id="nav-collections">Collections</a>
+      <a href="/querylog-ui" id="nav-querylog">Query Log</a>
+      <a href="/ingest-ui" id="nav-ingest">Ingest</a>
+      <a href="/metrics-ui" id="nav-metrics">Metrics</a>
+      <a href="/admin-ui" id="nav-admin">Admin</a>
+    </nav>
+  </header>
+  <main>
+    <h1>Ingest Management</h1>
+
+    <div id="ingest-status" class="card" style="margin-bottom:1rem"></div>
+
+    <div class="section-header">
+      <h2>Collections</h2>
+      <div>
+        <button class="btn primary" onclick="triggerIngest('now')">Trigger Ingest Now</button>
+        <button class="btn danger" onclick="if(confirm('Clear state and re-ingest everything?')) triggerIngest('full')">Full Re-ingest</button>
+      </div>
+    </div>
+
+    <table id="ingest-collections">
+      <thead><tr><th>Name</th><th>Source Types</th><th>Last Updated</th></tr></thead>
+      <tbody></tbody>
+    </table>
+  </main>
+
+  <script src="/static/app.js"></script>
+  <script>
+    document.getElementById('nav-ingest').classList.add('active');
+    poll(loadIngestStatus);
+    loadIngestStatus();
+  </script>
+</body>
+</html>

@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Query Log — ragdeck</title>
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+  <header>
+    <nav>
+      <a href="/" id="nav-dashboard">Dashboard</a>
+      <a href="/collections-ui" id="nav-collections">Collections</a>
+      <a href="/querylog-ui" id="nav-querylog">Query Log</a>
+      <a href="/ingest-ui" id="nav-ingest">Ingest</a>
+      <a href="/metrics-ui" id="nav-metrics">Metrics</a>
+      <a href="/admin-ui" id="nav-admin">Admin</a>
+    </nav>
+  </header>
+  <main>
+    <h1>Query Log</h1>
+
+    <div class="section-header">
+      <div>
+        <label style="font-size:.85rem;color:var(--text-muted);margin-right:.5rem">Filter:</label>
+        <select id="grounding-filter" onchange="loadQuerylog(0, this.value)" style="padding:.3rem .6rem;border-radius:6px;border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:.85rem">
+          <option value="">All</option>
+          <option value="corpus">Corpus</option>
+          <option value="general">General</option>
+          <option value="mixed">Mixed</option>
+        </select>
+      </div>
+    </div>
+
+    <table id="querylog-table">
+      <thead><tr><th>Time</th><th>Grounding</th><th>Latency</th><th>Cited</th><th>Hash</th></tr></thead>
+      <tbody></tbody>
+    </table>
+    <div class="pagination" id="querylog-pagination"></div>
+
+    <div id="querylog-entry" class="card" hidden style="margin-top:1rem"></div>
+    <div id="querylog-stats" class="card" style="margin-top:1rem"></div>
+  </main>
+
+  <script src="/static/app.js"></script>
+  <script>
+    document.getElementById('nav-querylog').classList.add('active');
+    poll(loadQuerylog);
+    poll(loadQuerylogStats);
+    loadQuerylog();
+    loadQuerylogStats();
+  </script>
+</body>
+</html>

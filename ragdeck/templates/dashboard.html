@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ragdeck — RAG Suite Admin</title>
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+  <header>
+    <nav>
+      <a href="/" id="nav-dashboard">Dashboard</a>
+      <a href="/collections-ui" id="nav-collections">Collections</a>
+      <a href="/querylog-ui" id="nav-querylog">Query Log</a>
+      <a href="/ingest-ui" id="nav-ingest">Ingest</a>
+      <a href="/metrics-ui" id="nav-metrics">Metrics</a>
+      <a href="/admin-ui" id="nav-admin">Admin</a>
+    </nav>
+  </header>
+  <main>
+    <h1>Dashboard</h1>
+
+    <div id="error-banner" hidden></div>
+
+    <h2>Service Status</h2>
+    <div class="tile-grid" id="status-grid">
+      <div class="tile" id="status-ragpipe">
+        <div class="label">ragpipe</div>
+        <div class="value">—</div>
+        <div class="sub">:8090</div>
+      </div>
+      <div class="tile" id="status-ragstuffer">
+        <div class="label">ragstuffer</div>
+        <div class="value">—</div>
+        <div class="sub">:8091</div>
+      </div>
+      <div class="tile" id="status-ragwatch">
+        <div class="label">ragwatch</div>
+        <div class="value">—</div>
+        <div class="sub">:9090</div>
+      </div>
+      <div class="tile" id="status-qdrant">
+        <div class="label">Qdrant</div>
+        <div class="value">—</div>
+        <div class="sub">:6333</div>
+      </div>
+      <div class="tile" id="status-postgres">
+        <div class="label">Postgres</div>
+        <div class="value">—</div>
+        <div class="sub">:5432</div>
+      </div>
+    </div>
+
+    <div class="tile-grid">
+      <div class="tile">
+        <div class="label">Collections</div>
+        <div class="value" id="dash-collections">—</div>
+      </div>
+      <div class="tile">
+        <div class="label">Queries Today</div>
+        <div class="value" id="dash-queries">—</div>
+      </div>
+      <div class="tile">
+        <div class="label">Corpus Rate</div>
+        <div class="value" id="dash-corpus-rate">—</div>
+      </div>
+      <div class="tile">
+        <div class="label">Avg Latency</div>
+        <div class="value" id="dash-latency">—</div>
+      </div>
+    </div>
+
+    <h2>Grounding Distribution</h2>
+    <div class="canvas-container">
+      <canvas id="grounding-canvas"></canvas>
+    </div>
+
+    <h2>Recent Queries</h2>
+    <table id="recent-queries-table">
+      <thead><tr><th>Time</th><th>Ground</th><th>Latency</th><th>Cited</th></tr></thead>
+      <tbody></tbody>
+    </table>
+    <div class="pagination" id="recent-pagination"></div>
+  </main>
+  <script src="/static/app.js"></script>
+  <script>
+    document.getElementById('nav-dashboard').classList.add('active');
+
+    async function loadDash() {
+      await loadStatus();
+
+      const [colData, qlData, statsData] = await Promise.all([
+        apiGet('/collections'),
+        apiGet('/querylog?limit=10'),
+        apiGet('/querylog/stats')
+      ]);
+
+      document.getElementById('dash-collections').textContent =
+        colData?.collections?.length ?? '—';
+
+      if (statsData && statsData.total) {
+        document.getElementById('dash-queries').textContent = statsData.total;
+        const byG = statsData.by_grounding || {};
+        const corpus = byG.corpus?.count || 0;
+        const total = statsData.total || 1;
+        const rate = ((corpus / total) * 100).toFixed(0);
+        document.getElementById('dash-corpus-rate').textContent = rate + '%';
+        const avgLat = [
+          byG.corpus?.avg_latency,
+          byG.general?.avg_latency,
+          byG.mixed?.avg_latency
+        ].filter(Boolean).reduce((a, b) => a + b, 0) / 3;
+        document.getElementById('dash-latency').textContent =
+          avgLat ? avgLat.toFixed(0) + 'ms' : '—';
+        drawGroundingDonut(byG, total);
+      }
+
+      if (qlData?.entries) {
+        const tbody = document.querySelector('#recent-queries-table tbody');
+        tbody.innerHTML = '';
+        qlData.entries.forEach(e => {
+          const tr = document.createElement('tr');
+          tr.style.cursor = 'pointer';
+          tr.onclick = () => viewQueryEntry(e.query_hash);
+          tr.innerHTML = `
+            <td>${e.created_at ? new Date(e.created_at).toLocaleString() : '—'}</td>
+            <td><span class="badge badge-${e.grounding}">${e.grounding}</span></td>
+            <td>${e.latency_ms ? e.latency_ms + 'ms' : '—'}</td>
+            <td>${(e.cited_chunks || []).length}</td>`;
+          tbody.appendChild(tr);
+        });
+      }
+    }
+
+    poll(loadDash);
+    loadDash();
+  </script>
+</body>
+</html>
