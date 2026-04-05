@@ -1,4 +1,5 @@
 """Tests for /collections endpoints."""
+
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -17,8 +18,11 @@ class TestListCollections:
     def test_returns_collections_list(self, mock_get_pool, client):
         mock_row = MagicMock()
         mock_row.__getitem__ = lambda s, k: {
-            "id": "abc", "name": "test-col", "description": "",
-            "source_types": '["drive"]', "created_at": None,
+            "id": "abc",
+            "name": "test-col",
+            "description": "",
+            "source_types": '["drive"]',
+            "created_at": None,
         }[k]
 
         mock_conn = MagicMock()
@@ -61,9 +65,12 @@ class TestDeleteCollection:
 
 class _ACM:
     """Async context manager wrapper for a sync mock."""
+
     def __init__(self, value):
         self._value = value
+
     async def __aenter__(self):
         return self._value
+
     async def __aexit__(self, *args):
         pass

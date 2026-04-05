@@ -1,4 +1,5 @@
 """Tests for graceful handling when services are unavailable."""
+
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -15,8 +16,10 @@ def client():
 class _ACM:
     def __init__(self, value):
         self._value = value
+
     async def __aenter__(self):
         return self._value
+
     async def __aexit__(self, *args):
         pass
 

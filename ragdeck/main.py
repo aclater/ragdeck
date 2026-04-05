@@ -199,8 +199,7 @@ async def list_collections():
                 if resp.status_code == 200:
                     data = resp.json()
                     vector_counts = {
-                        c["name"]: c.get("vectors_count", 0)
-                        for c in data.get("result", {}).get("collections", [])
+                        c["name"]: c.get("vectors_count", 0) for c in data.get("result", {}).get("collections", [])
                     }
                     for col in collections:
                         col["vector_count"] = vector_counts.get(col["name"], 0)
@@ -238,7 +237,9 @@ async def create_collection(request: Request):
                     ON CONFLICT (name) DO UPDATE SET description = $2, updated_at = now()
                     RETURNING id
                     """,
-                    name, description, "[]",
+                    name,
+                    description,
+                    "[]",
                 )
             )
 
@@ -336,9 +337,7 @@ async def ingest_status():
 
         pool = await get_pool()
         async with pool.acquire() as conn:
-            rows = await conn.fetch(
-                "SELECT name, source_types, updated_at FROM collections ORDER BY updated_at DESC"
-            )
+            rows = await conn.fetch("SELECT name, source_types, updated_at FROM collections ORDER BY updated_at DESC")
 
         return {
             "ragstuffer_up": ragstuffer_up,
@@ -438,11 +437,11 @@ async def get_querylog(
                     ORDER BY created_at DESC
                     LIMIT $1 OFFSET $2
                     """,
-                    limit, offset, grounding,
+                    limit,
+                    offset,
+                    grounding,
                 )
-                total = await conn.fetchval(
-                    "SELECT COUNT(*) FROM query_log WHERE grounding = $1", grounding
-                )
+                total = await conn.fetchval("SELECT COUNT(*) FROM query_log WHERE grounding = $1", grounding)
             else:
                 rows = await conn.fetch(
                     """
@@ -451,7 +450,8 @@ async def get_querylog(
                     ORDER BY created_at DESC
                     LIMIT $1 OFFSET $2
                     """,
-                    limit, offset,
+                    limit,
+                    offset,
                 )
                 total = await conn.fetchval("SELECT COUNT(*) FROM query_log")
 

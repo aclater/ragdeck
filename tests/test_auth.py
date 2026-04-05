@@ -1,4 +1,5 @@
 """Tests for auth on POST/DELETE endpoints."""
+
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -15,8 +16,10 @@ def client():
 class _ACM:
     def __init__(self, value):
         self._value = value
+
     async def __aenter__(self):
         return self._value
+
     async def __aexit__(self, *args):
         pass
 
@@ -55,10 +58,13 @@ class TestAuthRequired:
             assert response.status_code == 401
 
     def test_bearer_token_accepted(self, client):
-        with patch.dict("ragdeck.main.__dict__", {
-            "ADMIN_TOKEN": "correct-token",
-            "RAGSTUFFER_ADMIN_TOKEN": "stuffer-token",
-        }):
+        with patch.dict(
+            "ragdeck.main.__dict__",
+            {
+                "ADMIN_TOKEN": "correct-token",
+                "RAGSTUFFER_ADMIN_TOKEN": "stuffer-token",
+            },
+        ):
             with patch("ragdeck.main.httpx.AsyncClient") as mock_class:
                 mock_resp = MagicMock()
                 mock_resp.status_code = 200
