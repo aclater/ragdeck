@@ -10,9 +10,8 @@ RUN dnf install -y -q python3 python3-pip curl && \
 WORKDIR /app
 
 COPY pyproject.toml README.md ./
-RUN pip install --no-cache-dir --no-build-isolation -e .
-
 COPY ragdeck/ ragdeck/
+RUN pip install --no-cache-dir .
 
 USER 1001
 
