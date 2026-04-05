@@ -26,10 +26,10 @@ ragdeck is the administrative control plane for the rag-suite. It provides a uni
    │ Qdrant  │ │ragstuff│ │ragpipe│ │ragwatch │
    │         │ │  er    │ │       │ │(Prometheus)│
    └─────────┘ └────────┘ └───────┘ └─────────┘
-                                    │
-                               ┌────▼────┐
-                               │ Grafana │
-                               └─────────┘
+                                     │
+                                ┌────▼────┐
+                                │ Grafana │
+                                └─────────┘
 ```
 
 ## Quick start (pip)
@@ -56,9 +56,37 @@ python -m pytest tests/ -v
 ruff check && ruff format --check
 ```
 
+## Configuration
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `PORT` | `8095` | Port to listen on |
+
 ## Status
 
-Under active development. Only a health endpoint is implemented — this is a scaffold.
+**Under active development — scaffold.** Currently implemented:
+
+- `/health` — returns `{"status": "ok"}`
+
+Planned (not yet implemented):
+
+- Collections browser — Qdrant collection management
+- Ingest monitor — ragstuffer job status and manual trigger
+- Query log viewer — ragpipe query_log search and filter
+- Probe runs dashboard — ragprobe test results
+- Metrics dashboard — ragwatch/Prometheus integration
+
+## Project structure
+
+```
+ragdeck/
+  __init__.py      — empty (package marker)
+  main.py          — FastAPI app (health endpoint only, currently)
+tests/
+  test_main.py     — stub test for /health
+quadlets/
+  ragdeck.container — admin UI service quadlet (stub)
+```
 
 ## License
 
