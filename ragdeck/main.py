@@ -11,4 +11,4 @@ async def health():
 def main():
     import uvicorn
 
-    uvicorn.run("ragdeck.main:app", host="0.0.0.0", port=8095)
+    uvicorn.run("ragdeck.main:app", host="0.0.0.0", port=8095)  # nosec B104 — container service must bind all interfaces
