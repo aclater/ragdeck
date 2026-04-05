@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Collections — ragdeck</title>
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+  <header>
+    <nav>
+      <a href="/" id="nav-dashboard">Dashboard</a>
+      <a href="/collections-ui" id="nav-collections">Collections</a>
+      <a href="/querylog-ui" id="nav-querylog">Query Log</a>
+      <a href="/ingest-ui" id="nav-ingest">Ingest</a>
+      <a href="/metrics-ui" id="nav-metrics">Metrics</a>
+      <a href="/admin-ui" id="nav-admin">Admin</a>
+    </nav>
+  </header>
+  <main>
+    <div class="section-header">
+      <h1>Collections</h1>
+      <button class="btn primary" onclick="openModal('create-modal')">+ New Collection</button>
+    </div>
+
+    <table id="collections-table">
+      <thead><tr><th>Name</th><th>Vectors</th><th>Source Types</th><th>Created</th><th>Actions</th></tr></thead>
+      <tbody></tbody>
+    </table>
+
+    <div id="collection-detail" class="card" hidden>
+      <h3>Collection Detail</h3>
+    </div>
+  </main>
+
+  <div class="modal-overlay" id="create-modal">
+    <div class="modal">
+      <h3>Create Collection</h3>
+      <form onsubmit="handleCreateCollection(event)">
+        <div class="form-group">
+          <label>Name</label>
+          <input type="text" id="col-name" required placeholder="e.g. my-collection">
+        </div>
+        <div class="form-group">
+          <label>Description (optional)</label>
+          <input type="text" id="col-desc" placeholder="What is this collection for?">
+        </div>
+        <div class="actions">
+          <button type="button" class="btn" onclick="closeModal('create-modal')">Cancel</button>
+          <button type="submit" class="btn primary">Create</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script src="/static/app.js"></script>
+  <script>
+    document.getElementById('nav-collections').classList.add('active');
+    poll(loadCollections);
+    loadCollections();
+
+    async function handleCreateCollection(e) {
+      e.preventDefault();
+      const name = document.getElementById('col-name').value.trim();
+      const description = document.getElementById('col-desc').value.trim();
+      closeModal('create-modal');
+      const data = await apiPost('/collections', { name, description });
+      if (!data) return;
+      if (data.error) { showMsg(data.error, 'error'); return; }
+      showMsg(`Collection "${name}" created`, 'success');
+      loadCollections();
+    }
+  </script>
+</body>
+</html>

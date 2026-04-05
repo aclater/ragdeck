@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin — ragdeck</title>
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+  <header>
+    <nav>
+      <a href="/" id="nav-dashboard">Dashboard</a>
+      <a href="/collections-ui" id="nav-collections">Collections</a>
+      <a href="/querylog-ui" id="nav-querylog">Query Log</a>
+      <a href="/ingest-ui" id="nav-ingest">Ingest</a>
+      <a href="/metrics-ui" id="nav-metrics">Metrics</a>
+      <a href="/admin-ui" id="nav-admin">Admin</a>
+    </nav>
+  </header>
+  <main>
+    <h1>Admin Actions</h1>
+
+    <div class="info-msg" style="margin-bottom:1rem">
+      Admin actions require the RAGDECK_ADMIN_TOKEN. Enter it below once per session.
+    </div>
+
+    <div class="form-group" style="max-width:400px">
+      <label>RAGDECK_ADMIN_TOKEN</label>
+      <input type="password" id="admin-token-input" placeholder="Enter token to enable admin actions">
+      <button class="btn" onclick="handleSetToken()" style="margin-top:.5rem">Set Token</button>
+      <button class="btn" onclick="handleClearToken()" style="margin-top:.5rem">Clear</button>
+    </div>
+
+    <div class="card">
+      <h3>ragpipe — Route Configuration</h3>
+      <p style="color:var(--text-muted);font-size:.85rem;margin-bottom:1rem">
+        Reload routes to pick up changes to <code>routes.yaml</code> without restarting ragpipe.
+      </p>
+      <div class="form-group">
+        <label>ragpipe admin token (if different)</label>
+        <input type="password" id="ragpipe-token" placeholder="Optional override">
+      </div>
+      <button class="btn primary" onclick="adminAction('reload-routes')">Reload Routes</button>
+      <div id="admin-reload-routes-result" style="margin-top:.75rem"></div>
+    </div>
+
+    <div class="card">
+      <h3>ragpipe — System Prompt</h3>
+      <p style="color:var(--text-muted);font-size:.85rem;margin-bottom:1rem">
+        Hot-reload the system prompt from <code>system-prompt.txt</code> without restarting.
+      </p>
+      <button class="btn primary" onclick="adminAction('reload-prompt')">Reload System Prompt</button>
+      <div id="admin-reload-prompt-result" style="margin-top:.75rem"></div>
+    </div>
+
+    <div class="card">
+      <h3>Current Config</h3>
+      <button class="btn" onclick="loadAdminConfig()">Refresh Config</button>
+      <div id="admin-config" style="margin-top:1rem"></div>
+    </div>
+  </main>
+
+  <script src="/static/app.js"></script>
+  <script>
+    document.getElementById('nav-admin').classList.add('active');
+
+    function handleSetToken() {
+      const t = document.getElementById('admin-token-input').value;
+      if (!t) { showMsg('Enter a token first', 'error'); return; }
+      setToken(t);
+      showMsg('Token set', 'success');
+    }
+
+    function handleClearToken() {
+      clearToken();
+      document.getElementById('admin-token-input').value = '';
+      showMsg('Token cleared', 'info');
+    }
+
+    loadAdminConfig();
+  </script>
+</body>
+</html>
