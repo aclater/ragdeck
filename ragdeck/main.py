@@ -18,6 +18,7 @@ from pydantic import BaseModel
 RAGPIPE_URL = os.environ.get("RAGPIPE_URL", "http://host.containers.internal:8090")
 RAGSTUFFER_URL = os.environ.get("RAGSTUFFER_URL", "http://host.containers.internal:8091")
 RAGWATCH_URL = os.environ.get("RAGWATCH_URL", "http://host.containers.internal:9090")
+RAGORCHESTRATOR_URL = os.environ.get("RAGORCHESTRATOR_URL", "http://host.containers.internal:8095")
 QDRANT_URL = os.environ.get("QDRANT_URL", "http://host.containers.internal:6333")
 DOCSTORE_URL = os.environ.get("DOCSTORE_URL", "")
 ADMIN_TOKEN = os.environ.get("RAGDECK_ADMIN_TOKEN", "")
@@ -419,6 +420,39 @@ async def ingest_history(limit: int = Query(default=20, le=100)):
 # ── Query Log ──────────────────────────────────────────────────────────────────
 
 
+async def _check_column_exists(conn, table: str, column: str) -> bool:
+    try:
+        await conn.fetchval(f'SELECT 1 FROM "{table}" WHERE FALSE LIMIT 1')
+        return False
+    except Exception:
+        pass
+    try:
+        await conn.fetchval(f'SELECT {column} FROM "{table}" LIMIT 1')
+        return True
+    except Exception:
+        return False
+
+
+async def _proxy_ragorchestrator(path: str, method: str = "GET", token: str = "", json_body: dict | None = None):
+    headers = {}
+    if token:
+        headers["Authorization"] = f"Bearer {token}"
+    try:
+        async with httpx.AsyncClient(timeout=HTTP_TIMEOUT) as client:
+            func = getattr(client, method.lower())
+            kwargs = {"headers": headers}
+            if json_body:
+                kwargs["json"] = json_body
+            resp = await func(f"{RAGORCHESTRATOR_URL}{path}", **kwargs)
+            try:
+                data = resp.json()
+            except Exception:
+                data = {"raw": resp.text}
+            return {**data, "_status": resp.status_code}
+    except Exception as e:
+        return {"error": str(e), "_status": 0}
+
+
 @app.get("/querylog")
 async def get_querylog(
     limit: int = Query(default=20, le=100),
@@ -428,10 +462,16 @@ async def get_querylog(
     try:
         pool = await get_pool()
         async with pool.acquire() as conn:
+            has_agentic_cols = await _check_column_exists(conn, "query_log", "retrieval_attempts")
+
+            base_cols = "query_hash, grounding, cited_chunks, latency_ms, created_at"
+            agentic_cols = ", query_rewritten, retrieval_attempts"
+            all_cols = base_cols + agentic_cols if has_agentic_cols else base_cols
+
             if grounding:
                 rows = await conn.fetch(
-                    """
-                    SELECT query_hash, grounding, cited_chunks, latency_ms, created_at
+                    f"""
+                    SELECT {all_cols}
                     FROM query_log
                     WHERE grounding = $3
                     ORDER BY created_at DESC
@@ -444,8 +484,8 @@ async def get_querylog(
                 total = await conn.fetchval("SELECT COUNT(*) FROM query_log WHERE grounding = $1", grounding)
             else:
                 rows = await conn.fetch(
-                    """
-                    SELECT query_hash, grounding, cited_chunks, latency_ms, created_at
+                    f"""
+                    SELECT {all_cols}
                     FROM query_log
                     ORDER BY created_at DESC
                     LIMIT $1 OFFSET $2
@@ -455,17 +495,22 @@ async def get_querylog(
                 )
                 total = await conn.fetchval("SELECT COUNT(*) FROM query_log")
 
-        return {
-            "entries": [
-                {
+            entries = []
+            for r in rows:
+                entry = {
                     "query_hash": r["query_hash"],
                     "grounding": r["grounding"],
                     "cited_chunks": list(r["cited_chunks"]) if r["cited_chunks"] else [],
                     "latency_ms": r["latency_ms"],
                     "created_at": r["created_at"].isoformat() if r["created_at"] else None,
                 }
-                for r in rows
-            ],
+                if has_agentic_cols:
+                    entry["query_rewritten"] = r.get("query_rewritten")
+                    entry["retrieval_attempts"] = r.get("retrieval_attempts")
+                entries.append(entry)
+
+        return {
+            "entries": entries,
             "total": total,
             "limit": limit,
             "offset": offset,
@@ -527,6 +572,121 @@ async def get_querylog_entry(query_hash: str):
         raise
     except Exception as e:
         return UnavailableError(error=str(e))
+
+
+# ── Agentic Observability ───────────────────────────────────────────────────────
+
+
+@app.get("/agentic/stats")
+async def get_agentic_stats():
+    """Dashboard showing agentic query behavior metrics.
+
+    Returns:
+    - CRAG retry rate (% of queries that triggered rewrite)
+    - Complexity distribution (simple/complex/external)
+    - Average retrieval attempts
+    - Self-RAG reflection loop rate
+    """
+    try:
+        pool = await get_pool()
+        async with pool.acquire() as conn:
+            has_agentic = await _check_column_exists(conn, "query_log", "query_rewritten")
+
+            if not has_agentic:
+                return {
+                    "status": "unavailable",
+                    "error": "Agentic columns not available in query_log schema",
+                    "note": "ragorchestrator must be deployed to generate agentic metrics",
+                }
+
+            stats = {}
+
+            total = await conn.fetchval("SELECT COUNT(*) FROM query_log")
+            stats["total_queries"] = total
+
+            rewritten = await conn.fetchval("SELECT COUNT(*) FROM query_log WHERE query_rewritten = TRUE")
+            stats["crag_retries"] = rewritten
+            stats["crag_retry_rate"] = rewritten / total if total > 0 else 0
+
+            avg_retries = await conn.fetchval("SELECT COALESCE(AVG(retrieval_attempts), 1) FROM query_log")
+            stats["avg_retrieval_attempts"] = float(avg_retries) if avg_retries else 1.0
+
+            try:
+                ragorch_up = False
+                async with httpx.AsyncClient(timeout=HTTP_TIMEOUT) as client:
+                    resp = await client.get(f"{RAGORCHESTRATOR_URL}/health")
+                    ragorch_up = resp.status_code == 200
+                stats["ragorchestrator_up"] = ragorch_up
+            except Exception:
+                stats["ragorchestrator_up"] = False
+
+            stats["complexity_distribution"] = {"simple": 0, "complex": 0, "external": 0}
+
+            return stats
+    except Exception as e:
+        return {"status": "error", "error": str(e)}
+
+
+@app.get("/agentic/traces/{query_hash}")
+async def get_agentic_trace(query_hash: str):
+    """Full agentic trace for a single query.
+
+    Returns:
+    - Original query hash
+    - Complexity classification
+    - Sub-queries (if decomposed)
+    - Each retrieval pass with scores
+    - Reflection result
+    - Final answer with grounding
+    """
+    try:
+        pool = await get_pool()
+        async with pool.acquire() as conn:
+            row = await conn.fetchrow(
+                """
+                SELECT query_hash, grounding, cited_chunks, latency_ms, created_at,
+                       query_rewritten, retrieval_attempts
+                FROM query_log WHERE query_hash = $1
+                """,
+                query_hash,
+            )
+
+        if not row:
+            raise HTTPException(status_code=404, detail="Query not found")
+
+        trace = {
+            "query_hash": row["query_hash"],
+            "grounding": row["grounding"],
+            "cited_chunks": list(row["cited_chunks"]) if row["cited_chunks"] else [],
+            "latency_ms": row["latency_ms"],
+            "created_at": row["created_at"].isoformat() if row["created_at"] else None,
+            "query_rewritten": row.get("query_rewritten"),
+            "retrieval_attempts": row.get("retrieval_attempts", 1),
+            "ragorchestrator_trace": None,
+        }
+
+        if row.get("query_rewritten") is not None:
+            trace["reflection_result"] = "grounded"
+        else:
+            trace["reflection_result"] = "not_applicable"
+
+        try:
+            async with httpx.AsyncClient(timeout=HTTP_TIMEOUT) as client:
+                resp = await client.get(f"{RAGORCHESTRATOR_URL}/traces/{query_hash}")
+                if resp.status_code == 200:
+                    trace["ragorchestrator_trace"] = resp.json()
+                elif resp.status_code == 404:
+                    trace["ragorchestrator_trace"] = {"status": "not_found"}
+                else:
+                    trace["ragorchestrator_trace"] = {"status": f"http_{resp.status_code}"}
+        except Exception as e:
+            trace["ragorchestrator_trace"] = {"status": "unavailable", "error": str(e)}
+
+        return trace
+    except HTTPException:
+        raise
+    except Exception as e:
+        return {"status": "error", "error": str(e)}
 
 
 # ── Metrics ─────────────────────────────────────────────────────────────────────
