@@ -76,3 +76,15 @@ class TestServiceUnavailable:
             assert response.status_code == 200
             data = response.json()
             assert data["status"] == "unavailable"
+
+    def test_ragorchestrator_metrics_handles_down(self, client):
+        with patch("ragdeck.main.httpx.AsyncClient") as mock_class:
+            mock_client_inst = MagicMock()
+            mock_client_inst.__aenter__ = AsyncMock(side_effect=Exception("connection refused"))
+            mock_client_inst.__aexit__ = AsyncMock(return_value=None)
+            mock_class.return_value = mock_client_inst
+
+            response = client.get("/metrics/ragorchestrator")
+            assert response.status_code == 200
+            data = response.json()
+            assert "error" in data

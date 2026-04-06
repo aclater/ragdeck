@@ -40,7 +40,7 @@ async function loadStatus() {
   if (!data || data.status === 'unavailable') return;
   const grid = document.getElementById('status-grid');
   if (!grid) return;
-  const svcs = ['ragpipe', 'ragstuffer', 'ragwatch', 'qdrant', 'postgres'];
+  const svcs = ['ragpipe', 'ragstuffer', 'ragorchestrator', 'ragwatch', 'qdrant', 'postgres'];
   svcs.forEach(name => {
     const s = data.services[name];
     const el = document.getElementById(`status-${name}`);

@@ -77,3 +77,22 @@ class TestMetricsRagstuffer:
             assert response.status_code == 200
             data = response.json()
             assert "metrics" in data
+
+
+class TestMetricsRagorchestrator:
+    def test_proxies_ragorchestrator_metrics(self, client):
+        with patch("ragdeck.main.httpx.AsyncClient") as mock_class:
+            mock_resp = MagicMock()
+            mock_resp.status_code = 200
+            mock_resp.text = "ragorchestrator_queries_total 10\n"
+
+            mock_client_inst = MagicMock()
+            mock_client_inst.__aenter__ = AsyncMock(return_value=mock_client_inst)
+            mock_client_inst.__aexit__ = AsyncMock(return_value=None)
+            mock_client_inst.get = AsyncMock(return_value=mock_resp)
+            mock_class.return_value = mock_client_inst
+
+            response = client.get("/metrics/ragorchestrator")
+            assert response.status_code == 200
+            data = response.json()
+            assert "metrics" in data
