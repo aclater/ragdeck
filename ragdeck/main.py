@@ -588,6 +588,50 @@ async def get_querylog_entry(query_hash: str):
 # ── Agentic Observability ───────────────────────────────────────────────────────
 
 
+def _parse_prometheus_counter(text: str, metric_name: str, label: str) -> dict[str, float]:
+    """Parse a Prometheus counter with labels into a dict of {label_value: count}.
+
+    Example input:
+        ragorchestrator_complexity_classified_total{complexity="simple"} 5.0
+        ragorchestrator_complexity_classified_total{complexity="complex"} 2.0
+
+    Returns: {"simple": 5.0, "complex": 2.0}
+    """
+    import re
+
+    pattern = re.compile(
+        rf'^{re.escape(metric_name)}\{{{re.escape(label)}="([^"]+)"\}}\s+([\d.eE+-]+)',
+        re.MULTILINE,
+    )
+    return {m.group(1): float(m.group(2)) for m in pattern.finditer(text)}
+
+
+async def _fetch_complexity_distribution() -> dict[str, int]:
+    """Fetch complexity classification counts from ragorchestrator /metrics.
+
+    Falls back to zeros if ragorchestrator is unreachable or metrics
+    are not available.
+    """
+    default = {"simple": 0, "complex": 0, "external": 0}
+    try:
+        async with httpx.AsyncClient(timeout=HTTP_TIMEOUT) as client:
+            resp = await client.get(f"{RAGORCHESTRATOR_URL}/metrics")
+            if resp.status_code != 200:
+                return default
+            counts = _parse_prometheus_counter(
+                resp.text,
+                "ragorchestrator_complexity_classified_total",
+                "complexity",
+            )
+            return {
+                "simple": int(counts.get("simple", 0)),
+                "complex": int(counts.get("complex", 0)),
+                "external": int(counts.get("external", 0)),
+            }
+    except Exception:
+        return default
+
+
 @app.get("/agentic/stats")
 async def get_agentic_stats():
     """Dashboard showing agentic query behavior metrics.
@@ -631,7 +675,7 @@ async def get_agentic_stats():
             except Exception:
                 stats["ragorchestrator_up"] = False
 
-            stats["complexity_distribution"] = {"simple": 0, "complex": 0, "external": 0}
+            stats["complexity_distribution"] = await _fetch_complexity_distribution()
 
             return stats
     except Exception as e:
