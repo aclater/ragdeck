@@ -5,7 +5,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 from fastapi.testclient import TestClient
 
-from ragdeck.main import app
+from ragdeck.main import _parse_prometheus_counter, app
 
 
 @pytest.fixture
@@ -96,3 +96,24 @@ class TestMetricsRagorchestrator:
             assert response.status_code == 200
             data = response.json()
             assert "metrics" in data
+
+
+class TestParsePrometheusCounter:
+    def test_parses_labeled_counter(self):
+        text = (
+            "# HELP ragorchestrator_complexity_classified_total Total\n"
+            "# TYPE ragorchestrator_complexity_classified_total counter\n"
+            'ragorchestrator_complexity_classified_total{complexity="simple"} 5.0\n'
+            'ragorchestrator_complexity_classified_total{complexity="complex"} 2.0\n'
+        )
+        result = _parse_prometheus_counter(text, "ragorchestrator_complexity_classified_total", "complexity")
+        assert result == {"simple": 5.0, "complex": 2.0}
+
+    def test_returns_empty_for_no_match(self):
+        result = _parse_prometheus_counter("some_other_metric 42\n", "missing_metric", "label")
+        assert result == {}
+
+    def test_handles_scientific_notation(self):
+        text = 'my_counter{label="val"} 1.5e+03\n'
+        result = _parse_prometheus_counter(text, "my_counter", "label")
+        assert result == {"val": 1500.0}
