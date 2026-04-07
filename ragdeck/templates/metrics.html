@@ -21,13 +21,34 @@
     <h1>Metrics</h1>
 
     <div class="section-header">
-      <h2>ragwatch Summary</h2>
+      <h2>Service Health</h2>
       <button class="btn" onclick="loadMetrics()">Refresh</button>
     </div>
 
-    <div id="metrics-summary">
+    <div class="tile-grid" id="metrics-sources">
       <p style="color:var(--text-muted)">Loading…</p>
     </div>
+
+    <h2>ragpipe</h2>
+    <div class="tile-grid" id="metrics-ragpipe">
+      <p style="color:var(--text-muted)">—</p>
+    </div>
+
+    <h2>ragstuffer</h2>
+    <div class="tile-grid" id="metrics-ragstuffer">
+      <p style="color:var(--text-muted)">—</p>
+    </div>
+
+    <h2>ragorchestrator</h2>
+    <div class="tile-grid" id="metrics-ragorchestrator">
+      <p style="color:var(--text-muted)">—</p>
+    </div>
+
+    <div class="section-header" style="margin-top:1.5rem;">
+      <h2>Raw JSON</h2>
+      <button class="btn" onclick="toggleRawJson()">Show/Hide</button>
+    </div>
+    <div id="metrics-raw" class="json-view" style="display:none;"></div>
   </main>
 
   <script src="/static/app.js"></script>
