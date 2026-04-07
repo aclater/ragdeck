@@ -197,13 +197,83 @@ async function loadIngestStatus() {
 async function loadMetrics() {
   const data = await apiGet('/metrics');
   if (!data || data.error) {
-    document.getElementById('metrics-summary').innerHTML = '<p>Metrics unavailable. Is ragwatch running?</p>';
+    document.getElementById('metrics-sources').innerHTML = '<p class="error-msg">Metrics unavailable. Is ragwatch running?</p>';
+    document.getElementById('metrics-ragpipe').innerHTML = '';
+    document.getElementById('metrics-ragstuffer').innerHTML = '';
+    document.getElementById('metrics-ragorchestrator').innerHTML = '';
     return;
   }
-  const el = document.getElementById('metrics-summary');
-  if (!el) return;
-  el.innerHTML = `
-    <pre class="json-view">${esc(JSON.stringify(data, null, 2))}</pre>`;
+
+  const sources = data.sources || {};
+  const sourcesEl = document.getElementById('metrics-sources');
+  if (sourcesEl) {
+    const svcs = [
+      { key: 'ragpipe', label: 'ragpipe', port: ':8090' },
+      { key: 'ragstuffer', label: 'ragstuffer', port: ':8091' },
+      { key: 'ragorchestrator', label: 'ragorchestrator', port: ':8095' },
+    ];
+    sourcesEl.innerHTML = svcs.map(s => {
+      const src = sources[s.key] || {};
+      const up = src.up !== false;
+      return `<div class="tile">
+        <div class="label">${esc(s.label)}</div>
+        <div class="value"><span class="status-badge ${up ? 'up' : 'down'}">${up ? 'up' : 'down'}</span></div>
+        <div class="sub">${s.port} · ${src.metric_count ?? 0} metrics</div>
+      </div>`;
+    }).join('');
+  }
+
+  renderMetricTiles('metrics-ragpipe', data.ragpipe, [
+    { key: 'queries_total', label: 'Queries', fmt: 'int' },
+    { key: 'embed_cache_hits', label: 'Cache Hits', fmt: 'int' },
+    { key: 'embed_cache_misses', label: 'Cache Misses', fmt: 'int' },
+    { key: 'embed_cache_hit_rate', label: 'Cache Hit Rate', fmt: 'pct' },
+    { key: 'invalid_citations_total', label: 'Invalid Citations', fmt: 'int' },
+    { key: 'chunks_retrieved_total', label: 'Chunks Retrieved', fmt: 'int' },
+  ]);
+
+  renderMetricTiles('metrics-ragstuffer', data.ragstuffer, [
+    { key: 'documents_ingested_total', label: 'Documents Ingested', fmt: 'int' },
+    { key: 'chunks_created_total', label: 'Chunks Created', fmt: 'int' },
+    { key: 'embed_requests_total', label: 'Embed Requests', fmt: 'int' },
+    { key: 'embed_errors_total', label: 'Embed Errors', fmt: 'int' },
+  ]);
+
+  renderMetricTiles('metrics-ragorchestrator', data.ragorchestrator, [
+    { key: 'queries_total', label: 'Queries', fmt: 'int' },
+    { key: 'query_latency_seconds', label: 'Avg Latency', fmt: 'latency' },
+    { key: 'tool_calls_total', label: 'Tool Calls', fmt: 'int' },
+    { key: 'complexity_classified_total', label: 'Complexity Classifications', fmt: 'int' },
+  ]);
+
+  const rawEl = document.getElementById('metrics-raw');
+  if (rawEl) rawEl.textContent = JSON.stringify(data, null, 2);
+}
+
+function renderMetricTiles(elId, data, metrics) {
+  const el = document.getElementById(elId);
+  if (!el || !data) { if (el) el.innerHTML = '<p style="color:var(--text-muted)">No data</p>'; return; }
+  el.innerHTML = metrics.map(m => {
+    const val = data[m.key];
+    if (val == null) return '';
+    let display;
+    if (m.fmt === 'int') display = Number(val).toLocaleString();
+    else if (m.fmt === 'pct') display = (Number(val) * 100).toFixed(1) + '%';
+    else if (m.fmt === 'latency') display = Number(val).toFixed(3) + 's';
+    else display = esc(val);
+    return `<div class="tile">
+      <div class="label">${esc(m.label)}</div>
+      <div class="value">${display}</div>
+    </div>`;
+  }).join('');
+  if (!el.innerHTML) el.innerHTML = '<p style="color:var(--text-muted)">No data</p>';
+}
+
+let rawJsonVisible = false;
+function toggleRawJson() {
+  rawJsonVisible = !rawJsonVisible;
+  const el = document.getElementById('metrics-raw');
+  if (el) el.style.display = rawJsonVisible ? 'block' : 'none';
 }
 
 async function loadAdminConfig() {
