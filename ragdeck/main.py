@@ -102,6 +102,15 @@ async def _check_ragwatch():
         return {"status": "down", "url": RAGWATCH_URL, "error": str(e)}
 
 
+async def _check_ragorchestrator():
+    try:
+        async with httpx.AsyncClient(timeout=HTTP_TIMEOUT) as client:
+            resp = await client.get(f"{RAGORCHESTRATOR_URL}/health")
+            return {"status": "up" if resp.status_code == 200 else "down", "url": RAGORCHESTRATOR_URL}
+    except Exception as e:
+        return {"status": "down", "url": RAGORCHESTRATOR_URL, "error": str(e)}
+
+
 async def _check_qdrant():
     try:
         async with httpx.AsyncClient(timeout=HTTP_TIMEOUT) as client:
@@ -151,10 +160,11 @@ async def health():
 
 @app.get("/status")
 async def status():
-    pipe, stuffer, watch, qdrant, pg = await asyncio.gather(
+    pipe, stuffer, watch, orch, qdrant, pg = await asyncio.gather(
         _check_ragpipe(),
         _check_ragstuffer(),
         _check_ragwatch(),
+        _check_ragorchestrator(),
         _check_qdrant(),
         _check_postgres(),
     )
@@ -165,6 +175,7 @@ async def status():
             "ragpipe": pipe,
             "ragstuffer": stuffer,
             "ragwatch": watch,
+            "ragorchestrator": orch,
             "qdrant": qdrant,
             "postgres": pg,
         },
@@ -721,6 +732,18 @@ async def get_ragstuffer_metrics():
     try:
         async with httpx.AsyncClient(timeout=HTTP_TIMEOUT) as client:
             resp = await client.get(f"{RAGSTUFFER_URL}/metrics")
+            if resp.status_code == 200:
+                return {"metrics": resp.text}
+            return {"error": f"HTTP {resp.status_code}"}
+    except Exception as e:
+        return {"error": str(e)}
+
+
+@app.get("/metrics/ragorchestrator")
+async def get_ragorchestrator_metrics():
+    try:
+        async with httpx.AsyncClient(timeout=HTTP_TIMEOUT) as client:
+            resp = await client.get(f"{RAGORCHESTRATOR_URL}/metrics")
             if resp.status_code == 200:
                 return {"metrics": resp.text}
             return {"error": f"HTTP {resp.status_code}"}
