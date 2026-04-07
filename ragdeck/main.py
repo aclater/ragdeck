@@ -804,29 +804,29 @@ async def admin_config():
 
 @app.get("/")
 async def dashboard(request: Request):
-    return templates.TemplateResponse("dashboard.html", {"request": request})
+    return templates.TemplateResponse(request, "dashboard.html", {"request": request})
 
 
 @app.get("/collections-ui")
 async def collections_page(request: Request):
-    return templates.TemplateResponse("collections.html", {"request": request})
+    return templates.TemplateResponse(request, "collections.html", {"request": request})
 
 
 @app.get("/querylog-ui")
 async def querylog_page(request: Request):
-    return templates.TemplateResponse("querylog.html", {"request": request})
+    return templates.TemplateResponse(request, "querylog.html", {"request": request})
 
 
 @app.get("/ingest-ui")
 async def ingest_page(request: Request):
-    return templates.TemplateResponse("ingest.html", {"request": request})
+    return templates.TemplateResponse(request, "ingest.html", {"request": request})
 
 
 @app.get("/metrics-ui")
 async def metrics_page(request: Request):
-    return templates.TemplateResponse("metrics.html", {"request": request})
+    return templates.TemplateResponse(request, "metrics.html", {"request": request})
 
 
 @app.get("/admin-ui")
 async def admin_page(request: Request):
-    return templates.TemplateResponse("admin.html", {"request": request})
+    return templates.TemplateResponse(request, "admin.html", {"request": request})
